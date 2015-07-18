@@ -1,0 +1,79 @@
+#define SpeedSlow 45
+#define SpeedFast 90
+#define BlackTh 50
+#define WhiteCntTh 10
+
+// mode = 1: moving from mid to left
+// mode = 2: touching left edge, turn right
+// mode = 3: moving from mid to right
+// mode = 4: touching right edge, turn left
+
+int SV;
+
+sub CurveNegotiator()
+{
+  int mode = 1;
+  int white_cnt = 0;
+  SetSensorLight(IN_3);
+
+  OnFwd(OUT_A, SpeedFast);
+  OnFwd(OUT_B, SpeedFast);
+  repeat(5000)
+  {
+    SV = SensorRaw(IN_3);
+    if (SV<50) // black
+    {
+      if (mode==1) //tuching left edge, turn right
+      {
+        OnFwd(OUT_A, SpeedSlow);
+        OnFwd(OUT_B, SpeedFast);
+        mode = 2;
+      }
+      if (mode==3) // //tuching right edge, turn left
+      {
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedSlow);
+        mode = 4;
+      }
+      white_cnt=0;
+    }
+    else
+    {
+      if (mode==2 || mode==4)
+      {
+        white_cnt=white_cnt+1;
+      }
+      if (white_cnt>=WhiteCntTh)
+      {
+        if (mode==2)
+        {
+          mode = 3;
+        }
+        if (mode==4)
+        {
+          mode = 1;
+        }
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedFast);
+        //white_cnt=0;
+      }
+    }
+    Wait(30);
+    NumOut(0, LCD_LINE1, mode);
+    NumOut(0, LCD_LINE2, white_cnt);
+  }
+}
+
+task main()
+{
+
+  
+  // call subroutine
+  CurveNegotiator();
+  
+  // stop both motors
+  Off(OUT_AB);
+  
+  // let user see the last message
+  Wait(3000);
+}
