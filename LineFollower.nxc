@@ -1,5 +1,5 @@
-#define SpeedSlow 20
-#define SpeedFast 40
+#define SpeedSlow 10
+#define SpeedFast 60
 
 int SV;
 int LoopCount;
