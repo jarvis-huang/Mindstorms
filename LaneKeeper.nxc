@@ -1,0 +1,113 @@
+#define SpeedSlow 45
+#define SpeedFast 90
+#define BlackTh 50
+#define WhiteCntTh 10
+#define wheel_radius
+#define shaft_len
+
+// mode = 0: before first touch, unknown left or right
+// mode = 1: moving from mid to left
+// mode = 2: touching left edge, turn right
+// mode = 3: moving from mid to right
+// mode = 4: touching right edge, turn left
+
+// MotorRotationCount(MOTOR)
+// dist = (cur_deg - prev_deg) / 360 * (wheel_radius * 2 * PI);
+// deg = dist/(shaft_len/2)/(PI/2)*90;
+
+int SV;
+
+sub LaneKeeper()
+{
+  int mode = 0;
+  int white_cnt = 0;
+  long prev_deg = 0;
+  long cur_deg = 0;
+  long deg = 0;
+  SetSensorLight(IN_3);
+
+  OnFwd(OUT_A, SpeedFast);
+  OnFwd(OUT_B, SpeedFast);
+  repeat(5000)
+  {
+    SV = SensorRaw(IN_3);
+    if (SV<50) // black
+    {
+      if (mode==0) // 1st touch, need to determine left or right
+      {
+        // Stop the motors
+        OnFwd(OUT_A, 0);
+        OnFwd(OUT_B, 0);
+        // Try turning right
+        prev_deg = MotorRotationCount(OUT_A);
+        do
+        {
+          OnFwd(OUT_A, SpeedSlow);
+          OnFwd(OUT_B, -SpeedSlow);
+          SV = SensorRaw(IN_3);
+          cur_deg = MotorRotationCount(OUT_A);
+          deg = (cur_deg - prev_deg) * (2*wheel_radius / shaft_len);
+        } while(deg<=5 && SV<50);
+        if (SV<50) // guess correct
+        {
+          OnFwd(OUT_A, SpeedFast);
+          OnFwd(OUT_B, SpeedFast); 
+          mode = 3;         
+        }
+        else // guess wrong, turn left
+          mode = 3;
+      }
+      if (mode==1) //tuching left edge, turn right
+      {
+        OnFwd(OUT_A, SpeedSlow);
+        OnFwd(OUT_B, SpeedFast);
+        mode = 2;
+      }
+      if (mode==3) // //tuching right edge, turn left
+      {
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedSlow);
+        mode = 4;
+      }
+      white_cnt=0;
+    }
+    else
+    {
+      if (mode==2 || mode==4)
+      {
+        white_cnt=white_cnt+1;
+      }
+      if (white_cnt>=WhiteCntTh)
+      {
+        if (mode==2)
+        {
+          mode = 3;
+        }
+        if (mode==4)
+        {
+          mode = 1;
+        }
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedFast);
+        //white_cnt=0;
+      }
+    }
+    Wait(30);
+    NumOut(0, LCD_LINE1, mode);
+    NumOut(0, LCD_LINE2, white_cnt);
+  }
+}
+
+task main()
+{
+
+  
+  // call subroutine
+  LaneKeeper();
+  
+  // stop both motors
+  Off(OUT_AB);
+  
+  // let user see the last message
+  Wait(3000);
+}
