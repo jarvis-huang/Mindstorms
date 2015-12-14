@@ -1,0 +1,13 @@
+INSTALL
+-------
+Run install.sh
+
+LINE FOLLOWER
+-------------
+Launch nxcEditorGambas2.gambas, open LineFollower.nxc.
+Open nxcSimulator.
+Edit robot to use motor A for left wheel and B for right.
+Edit robot to use sensorport 3 as light sensor.
+Load a black curve as background (such as the built-in 680X680 Lines background).
+Place robot close to right edge of the line. It will continue to follow right edge.
+A screenshot of the LineFollower in action is saved in LineFollower.png
