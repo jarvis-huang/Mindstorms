@@ -1,0 +1,133 @@
+#define SpeedSnail 15
+#define SpeedSlow 30
+#define SpeedFast 60
+#define BlackTh 50
+#define WhiteCntTh 5 // threshold to consider out of black region
+#define wheel_radius 2.8
+#define shaft_len 11.6
+
+// mode = 0: before first touch, unknown left or right
+// mode = 1: moving from mid to left
+// mode = 2: touching left edge, turn right
+// mode = 3: moving from mid to right
+// mode = 4: touching right edge, turn left
+
+// MotorRotationCount(MOTOR)
+// dist = (cur_deg - prev_deg) / 360 * (wheel_radius * 2 * PI);
+// deg = dist/(shaft_len/2)/(PI/2)*90;
+//     = (cur_deg - prev_deg) * (2*wheel_radius / shaft_len);
+
+// From driver view, A=right wheel, B=left wheel
+
+
+
+sub LaneKeeper()
+{
+  int mode = 0;
+  int white_cnt = 0;
+  long prev_deg = 0;
+  long cur_deg = 0;
+  long deg = 0; // turned degrees
+  int SV;
+  SetSensorLight(IN_3);
+
+  OnFwd(OUT_A, SpeedFast);
+  OnFwd(OUT_B, SpeedFast);
+  repeat(5000)
+  {
+    SV = SensorRaw(IN_3);
+    TextOut(0, LCD_LINE1, "mode=");
+    NumOut(40, LCD_LINE1, mode);
+    TextOut(0, LCD_LINE2, "SV=");
+    NumOut(30, LCD_LINE2, SV);
+    
+    if (SV<50) // black
+    {
+      if (mode==0) // 1st touch, need to determine left or right
+      {
+        // Stop the motors
+        Off(OUT_AB);
+        
+        //Back up 1s distance
+        OnRev(OUT_AB, SpeedFast);
+        Wait(10000);
+        Off(OUT_AB);
+        
+        // Try turning right slightly
+        OnRev(OUT_A, SpeedSlow);
+        OnFwd(OUT_B, SpeedSlow);   
+        Wait(20);
+        
+        //Move forward 1s
+        OnFwd(OUT_AB, SpeedFast);
+        Wait(10000);
+        Off(OUT_AB);
+        
+        //Test color again
+        SV = SensorRaw(IN_3);
+        NumOut(0, LCD_LINE3, SV);
+        Wait(1000);
+        if (SV<50) // black, means now distance to line is shorter, we should turn left
+        {
+          mode = 3;         
+        }
+        else // white, means now distance to line is longer, we should turn right
+        {
+          mode = 1;
+        }
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedFast); 
+      }
+      if (mode==1) //tuching left edge, turn right
+      {
+        OnFwd(OUT_A, SpeedSlow);
+        OnFwd(OUT_B, SpeedFast);
+        mode = 2;
+      }
+      if (mode==3) // //tuching right edge, turn left
+      {
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedSlow);
+        mode = 4;
+      }
+      white_cnt=0;
+    }
+    else
+    {
+      if (mode==2 || mode==4)
+      {
+        white_cnt=white_cnt+1;
+      }
+      if (white_cnt>=WhiteCntTh)
+      {
+        if (mode==2)
+        {
+          mode = 3;
+        }
+        if (mode==4)
+        {
+          mode = 1;
+        }
+        OnFwd(OUT_A, SpeedFast);
+        OnFwd(OUT_B, SpeedFast);
+      }
+    }
+    NumOut(40, LCD_LINE1, mode);
+    NumOut(30, LCD_LINE2, SV);
+    Wait(10);
+  }
+}
+
+task main()
+{
+
+  
+  // call subroutine
+  LaneKeeper();
+  
+  // stop both motors
+  Off(OUT_AB);
+  
+  // let user see the last message
+  Wait(3000);
+}
