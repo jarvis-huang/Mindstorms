@@ -1,0 +1,73 @@
+#define SpeedSlow 10
+#define SpeedFast 60
+
+int SV;
+int LoopCount;
+
+sub FollowLine(int loopTime)
+{
+  int Threshold1=50;
+  int Threshold2=50;
+  int theSpeed;
+  long t;
+
+  // set sensor type and mode
+  SetSensorLight(IN_3);
+
+  // start looping
+  t = CurrentTick() + loopTime;
+  //while (t > CurrentTick())
+  repeat(2000)
+  {
+    // read the light sensor value
+    //SV = SensorRaw(IN_3);
+    SV = SensorRaw(IN_3);
+
+    // set speed for left motor
+    if (SV < Threshold2)
+    {
+      OnFwd(OUT_B, SpeedFast);
+    }
+    else
+    {
+      OnFwd(OUT_B, SpeedSlow);
+    }
+
+    // set speed for right motor
+    if (SV > Threshold1)
+    {
+      OnFwd(OUT_A, SpeedFast);
+    }
+    else
+    {
+      OnFwd(OUT_A, SpeedSlow);
+    }
+
+    // display sensor value
+    NumOut(0, LCD_LINE1, SV);
+    Wait(30);
+  }
+
+}
+
+task main()
+{
+  string lcStr;
+  string svStr;
+  string msg;
+  
+  // call subroutine
+  FollowLine(10000);
+  
+  // output results
+  //lcStr = NumToStr(LoopCount);
+  //svStr = NumToStr(SV);
+  //msg = svStr + " - " + lcStr;
+  //TextOut(0, LCD_LINE1, msg);
+  
+  // stop both motors
+  Off(OUT_AB);
+  
+  // let user see the last message
+  Wait(10000);
+}
